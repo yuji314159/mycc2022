@@ -20,11 +20,26 @@ struct Token {
     char *str;
 };
 
+char *user_input;
+
 Token *token;
 
 void error(char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+    exit(1);
+}
+
+void error_at(char *loc, char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+
+    int pos = loc - user_input;
+    fprintf(stderr, "%s\n", user_input);
+    fprintf(stderr, "%*s", pos, "");
+    fprintf(stderr, "^ ");
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
     exit(1);
@@ -40,14 +55,14 @@ bool consume(char op) {
 
 bool expect(char op) {
     if (token->kind != TK_RESERVED || token->str[0] != op) {
-        error("'%c' ではありません", op);
+        error_at(token->str, "'%c' ではありません", op);
     }
     token = token->next;
 }
 
 int expect_number() {
     if (token->kind != TK_NUM) {
-        error("数ではありません");
+        error_at(token->str, "数ではありません");
     }
     int val = token->val;
     token = token->next;
@@ -74,14 +89,13 @@ Token *tokenize(char *p) {
     while (*p) {
         if (isspace(*p)) {
             ++p;
-            continue;
         } else if (*p == '+' | *p == '-') {
             cur = new_token(TK_RESERVED, cur, p++);
         } else if (isdigit(*p)) {
             cur = new_token(TK_NUM, cur, p);
             cur->val = strtol(p, &p, 10);
         } else {
-            error("トークナイズできません");
+            error_at(p, "トークナイズできません");
         }
     }
 
@@ -91,10 +105,10 @@ Token *tokenize(char *p) {
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        fprintf(stderr, "引数の個数が正しくありません\n");
-        return 1;
+        error("引数の個数が正しくありません\n");
     }
 
+    user_input = argv[1];
     token = tokenize(argv[1]);
 
     printf(".intel_syntax noprefix\n");
