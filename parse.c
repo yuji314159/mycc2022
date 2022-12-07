@@ -8,8 +8,8 @@
 #include "mycc.h"
 
 char *user_input;
-
 Token *token;
+Node *code[100];
 
 void error(char *fmt, ...) {
     va_list ap;
@@ -40,6 +40,15 @@ bool consume(char *op) {
     }
     token = token->next;
     return true;
+}
+
+Token *consume_ident() {
+    if (token->kind != TK_IDENT) {
+        return false;
+    }
+    Token *tok = token;
+    token = token->next;
+    return tok;
 }
 
 bool expect(char *op) {
@@ -81,11 +90,18 @@ Token *tokenize(char *p) {
     while (*p) {
         if (isspace(*p)) {
             ++p;
-        } else if (memcmp(p, "<=", 2) == 0 || memcmp(p, ">=", 2) == 0 || memcmp(p, "==", 2) == 0 || memcmp(p, "!=", 2) == 0) {
+        } else if (
+                memcmp(p, "<=", 2) == 0 || memcmp(p, ">=", 2) == 0 ||
+                memcmp(p, "==", 2) == 0 || memcmp(p, "!=", 2) == 0) {
             cur = new_token(TK_RESERVED, cur, p, 2);
             p += 2;
-        } else if (*p == '+' | *p == '-' | *p == '*' | *p == '/' | *p == '(' | *p == ')' | *p == '<' | *p == '>') {
+        } else if (
+                *p == '+' || *p == '-' || *p == '*' || *p == '/' ||
+                *p == '(' || *p == ')' || *p == '<' || *p == '>' ||
+                *p == '=' || *p == ';') {
             cur = new_token(TK_RESERVED, cur, p++, 1);
+        } else if ('a' <= *p && *p <= 'z') {
+            cur = new_token(TK_IDENT, cur, p++, 1);
         } else if (isdigit(*p)) {
             cur = new_token(TK_NUM, cur, p, 0);
             cur->val = strtol(p, &p, 10);
@@ -113,11 +129,24 @@ Node *new_node_num(int val) {
     return node;
 }
 
+Node *new_node_lvar(Token *tok) {
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_LVAR;
+    node->offset = (tok->str[0] - 'a' + 1) * 8;
+}
+
+Node *expr();
+
 Node *primary() {
     if (consume("(")) {
         Node *node = expr();
         expect(")");
         return node;
+    }
+
+    Token *tok = consume_ident();
+    if (tok) {
+        return new_node_lvar(tok);
     }
 
     return new_node_num(expect_number());
@@ -195,6 +224,32 @@ Node *equality() {
     }
 }
 
+Node *assign() {
+    Node *node = equality();
+
+    for(;;) {
+        if (consume("=")) {
+            node = new_node(ND_ASSIGN, node, assign());
+        } else {
+            return node;
+        }
+    }
+}
+
 Node *expr() {
-    return equality();
+    return assign();
+}
+
+Node *stmt() {
+    Node *node = expr();
+    expect(";");
+    return node;
+}
+
+void program() {
+    int i = 0;
+    while (!at_eof()) {
+        code[i++] = stmt();
+    }
+    code[i] = NULL;
 }
