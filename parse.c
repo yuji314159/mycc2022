@@ -10,6 +10,7 @@
 char *user_input;
 Token *token;
 Node *code[100];
+LVar *locals;
 
 void error(char *fmt, ...) {
     va_list ap;
@@ -100,8 +101,13 @@ Token *tokenize(char *p) {
                 *p == '(' || *p == ')' || *p == '<' || *p == '>' ||
                 *p == '=' || *p == ';') {
             cur = new_token(TK_RESERVED, cur, p++, 1);
-        } else if ('a' <= *p && *p <= 'z') {
-            cur = new_token(TK_IDENT, cur, p++, 1);
+        } else if (isalpha(*p) || *p == '_') {
+            int len = 1;
+            while (isalnum(p[len]) || p[len] == '_') {
+                ++len;
+            }
+            cur = new_token(TK_IDENT, cur, p, len);
+            p += len;
         } else if (isdigit(*p)) {
             cur = new_token(TK_NUM, cur, p, 0);
             cur->val = strtol(p, &p, 10);
@@ -112,6 +118,15 @@ Token *tokenize(char *p) {
 
     new_token(TK_EOF, cur, p, 0);
     return head.next;
+}
+
+LVar *find_lvar(Token *tok) {
+    for (LVar *var = locals; var; var = var->next) {
+        if (var->len = tok->len && memcmp(var->name, tok->str, var->len) == 0) {
+            return var;
+        }
+    }
+    return NULL;
 }
 
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
@@ -132,7 +147,20 @@ Node *new_node_num(int val) {
 Node *new_node_lvar(Token *tok) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_LVAR;
-    node->offset = (tok->str[0] - 'a' + 1) * 8;
+
+    LVar *lvar = find_lvar(tok);
+    if (lvar) {
+        node->offset = lvar->offset;
+    } else {
+        lvar = calloc(1, sizeof(LVar));
+        lvar->next = locals;
+        lvar->name = tok->str;
+        lvar->len = tok->len;
+        lvar->offset = locals ? locals->offset + 8 : 0;
+        node->offset = lvar->offset;
+        locals = lvar;
+    }
+    return node;
 }
 
 Node *expr();
