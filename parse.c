@@ -43,6 +43,14 @@ bool consume(char *op) {
     return true;
 }
 
+bool consume_return() {
+    if (token->kind != TK_RETURN) {
+        return false;
+    }
+    token = token->next;
+    return true;
+}
+
 Token *consume_ident() {
     if (token->kind != TK_IDENT) {
         return false;
@@ -101,6 +109,9 @@ Token *tokenize(char *p) {
                 *p == '(' || *p == ')' || *p == '<' || *p == '>' ||
                 *p == '=' || *p == ';') {
             cur = new_token(TK_RESERVED, cur, p++, 1);
+        } else if (strncmp(p, "return", 6) == 0 && !isalnum(p[6]) && p[6] != '_') {
+            cur = new_token(TK_RETURN, cur, p, 6);
+            p += 6;
         } else if (isalpha(*p) || *p == '_') {
             int len = 1;
             while (isalnum(p[len]) || p[len] == '_') {
@@ -134,6 +145,13 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
     node->kind = kind;
     node->lhs = lhs;
     node->rhs = rhs;
+    return node;
+}
+
+Node *new_node_return(Node *lhs) {
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_RETURN;
+    node->lhs = lhs;
     return node;
 }
 
@@ -269,7 +287,12 @@ Node *expr() {
 }
 
 Node *stmt() {
-    Node *node = expr();
+    Node *node;
+    if (consume_return()) {
+        node = new_node_return(expr());
+    } else {
+        node = expr();
+    }
     expect(";");
     return node;
 }
