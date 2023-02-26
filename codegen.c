@@ -2,6 +2,8 @@
 
 #include "mycc.h"
 
+int labelseq = 0;
+
 void gen_lvar(Node *node) {
     if (node->kind != ND_LVAR) {
         error("代入の左辺値が変数ではありません");
@@ -34,6 +36,27 @@ void gen(Node *node) {
             printf("    pop rbp\n");
             printf("    ret\n");
             return;
+        case ND_IF: {
+            int seq = labelseq++;
+            if (node->els) {
+                gen(node->cond);
+                printf("    pop rax\n");
+                printf("    cmp rax, 0\n");
+                printf("    je .Lelse%d\n", seq);
+                gen(node->then);
+                printf("    jmp .Lend%d\n", seq);
+                printf(".Lelse%d:\n", seq);
+                gen(node->els);
+                printf(".Lend%d:\n", seq);
+            } else {
+                gen(node->cond);
+                printf("    pop rax\n");
+                printf("    cmp rax, 0\n");
+                printf("    je .Lend%d\n", seq);
+                gen(node->then);
+                printf(".Lend%d:\n", seq);
+            }
+        }
         case ND_NUM:
             printf("    push %d\n", node->val);
             return;
