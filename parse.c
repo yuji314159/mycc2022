@@ -75,6 +75,14 @@ bool consume_while() {
     return true;
 }
 
+bool consume_for() {
+    if (token->kind != TK_FOR) {
+        return false;
+    }
+    token = token->next;
+    return true;
+}
+
 Token *consume_ident() {
     if (token->kind != TK_IDENT) {
         return false;
@@ -145,6 +153,9 @@ Token *tokenize(char *p) {
         } else if (strncmp(p, "while", 5) == 0 && !isalnum(p[5]) && p[5] != '_') {
             cur = new_token(TK_WHILE, cur, p, 5);
             p += 5;
+        } else if (strncmp(p, "for", 3) == 0 && !isalnum(p[3]) && p[3] != '_') {
+            cur = new_token(TK_FOR, cur, p, 3);
+            p += 3;
         } else if (isalpha(*p) || *p == '_') {
             int len = 1;
             while (isalnum(p[len]) || p[len] == '_') {
@@ -166,7 +177,7 @@ Token *tokenize(char *p) {
 
 LVar *find_lvar(Token *tok) {
     for (LVar *var = locals; var; var = var->next) {
-        if (var->len = tok->len && memcmp(var->name, tok->str, var->len) == 0) {
+        if (var->len == tok->len && memcmp(var->name, tok->str, var->len) == 0) {
             return var;
         }
     }
@@ -340,6 +351,23 @@ Node *stmt() {
         expect("(");
         node->cond = expr();
         expect(")");
+        node->then = stmt();
+    } else if (consume_for()) {
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_FOR;
+        expect("(");
+        if (!consume(";")) {
+            node->init = expr();
+            expect(";");
+        }
+        if (!consume(";")) {
+            node->cond = expr();
+            expect(";");
+        }
+        if (!consume(")")) {
+            node->inc = expr();
+            expect(")");
+        }
         node->then = stmt();
     } else {
         node = expr();
