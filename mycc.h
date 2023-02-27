@@ -3,6 +3,7 @@ typedef enum {
     TK_RETURN,
     TK_IF,
     TK_ELSE,
+    TK_WHILE,
     TK_IDENT,
     TK_NUM,
     TK_EOF,
@@ -34,6 +35,7 @@ typedef enum {
     ND_LVAR,
     ND_RETURN,
     ND_IF,
+    ND_WHILE,
 } NodeKind;
 
 typedef struct Node Node;
@@ -43,7 +45,7 @@ struct Node {
     Node *lhs;
     Node *rhs;
 
-    // if statement
+    // if/while statement
     Node *cond;
     Node *then;
     Node *els;

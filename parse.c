@@ -67,6 +67,14 @@ bool consume_else() {
     return true;
 }
 
+bool consume_while() {
+    if (token->kind != TK_WHILE) {
+        return false;
+    }
+    token = token->next;
+    return true;
+}
+
 Token *consume_ident() {
     if (token->kind != TK_IDENT) {
         return false;
@@ -134,6 +142,9 @@ Token *tokenize(char *p) {
         } else if (strncmp(p, "else", 4) == 0 && !isalnum(p[4]) && p[4] != '_') {
             cur = new_token(TK_ELSE, cur, p, 4);
             p += 4;
+        } else if (strncmp(p, "while", 5) == 0 && !isalnum(p[5]) && p[5] != '_') {
+            cur = new_token(TK_WHILE, cur, p, 5);
+            p += 5;
         } else if (isalpha(*p) || *p == '_') {
             int len = 1;
             while (isalnum(p[len]) || p[len] == '_') {
@@ -323,6 +334,13 @@ Node *stmt() {
         if (consume_else()) {
             node->els = stmt();
         }
+    } else if (consume_while()) {
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_WHILE;
+        expect("(");
+        node->cond = expr();
+        expect(")");
+        node->then = stmt();
     } else {
         node = expr();
         expect(";");
