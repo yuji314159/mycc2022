@@ -90,6 +90,12 @@ void gen(Node *node) {
             printf(".Lend%d:\n", seq);
             return;
         }
+        case ND_BLOCK:
+            for (Node *n = node->body; n; n = n->next) {
+                gen(n);
+                printf("    pop rax\n");
+            }
+            return;
         case ND_NUM:
             printf("    push %d\n", node->val);
             return;

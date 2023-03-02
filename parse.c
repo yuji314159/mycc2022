@@ -139,7 +139,8 @@ Token *tokenize(char *p) {
         } else if (
                 *p == '+' || *p == '-' || *p == '*' || *p == '/' ||
                 *p == '(' || *p == ')' || *p == '<' || *p == '>' ||
-                *p == '=' || *p == ';') {
+                *p == '=' || *p == ';' ||
+                *p == '{' || *p == '}') {
             cur = new_token(TK_RESERVED, cur, p++, 1);
         } else if (strncmp(p, "return", 6) == 0 && !isalnum(p[6]) && p[6] != '_') {
             cur = new_token(TK_RETURN, cur, p, 6);
@@ -369,6 +370,19 @@ Node *stmt() {
             expect(")");
         }
         node->then = stmt();
+    } else if (consume("{")) {
+        Node head;
+        head.next = NULL;
+        Node *cur = &head;
+
+        while (!consume("}")) {
+            cur->next = stmt();
+            cur = cur->next;
+        }
+
+        node = calloc(1, sizeof(Node));
+        node->kind = ND_BLOCK;
+        node->body = head.next;
     } else {
         node = expr();
         expect(";");
