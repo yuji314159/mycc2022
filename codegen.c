@@ -3,6 +3,7 @@
 #include "mycc.h"
 
 int labelseq = 0;
+char *argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
 void gen_lvar(Node *node) {
     if (node->kind != ND_LVAR) {
@@ -96,10 +97,21 @@ void gen(Node *node) {
                 printf("    pop rax\n");
             }
             return;
-        case ND_FUNCALL:
+        case ND_FUNCALL: {
+            int nargs = 0;
+            for (Node *arg = node->args; arg; arg = arg->next) {
+                gen(arg);
+                ++nargs;
+            }
+
+            for (int i = nargs - 1; i >= 0; --i) {
+                printf("    pop %s\n", argregs[i]);
+            }
+
             printf("    call %s\n", node->funcname);
             printf("    push rax\n");
             return;
+        }
         case ND_NUM:
             printf("    push %d\n", node->val);
             return;

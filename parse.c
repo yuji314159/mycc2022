@@ -146,7 +146,7 @@ Token *tokenize(char *p) {
                 *p == '+' || *p == '-' || *p == '*' || *p == '/' ||
                 *p == '(' || *p == ')' || *p == '<' || *p == '>' ||
                 *p == '=' || *p == ';' ||
-                *p == '{' || *p == '}') {
+                *p == '{' || *p == '}' || *p == ',') {
             cur = new_token(TK_RESERVED, cur, p++, 1);
         } else if (strncmp(p, "return", 6) == 0 && !isalnum(p[6]) && p[6] != '_') {
             cur = new_token(TK_RETURN, cur, p, 6);
@@ -234,6 +234,21 @@ Node *new_node_lvar(Token *tok) {
 
 Node *expr();
 
+Node *funcargs() {
+    if (consume(")")) {
+        return NULL;
+    }
+
+    Node *head = expr();
+    Node *cur = head;
+    while (consume(",")) {
+        cur->next = expr();
+        cur = cur->next;
+    }
+    expect(")");
+    return head;
+}
+
 Node *primary() {
     if (consume("(")) {
         Node *node = expr();
@@ -244,10 +259,10 @@ Node *primary() {
     Token *tok = consume_ident();
     if (tok) {
         if (consume("(")) {
-            expect(")");
             Node *node = calloc(1, sizeof(Node));
             node->kind = ND_FUNCALL;
             node->funcname = strndup(tok->str, tok->len);
+            node->args = funcargs();
             return node;
         }
         return new_node_lvar(tok);
