@@ -108,7 +108,20 @@ void gen(Node *node) {
                 printf("    pop %s\n", argregs[i]);
             }
 
+            // RSP must be aligned to a 16 byte boundary
+            int seq = labelseq++;
+            printf("    mov rax, rsp\n");
+            printf("    add rax, 15\n");    // RAX = RAX / 16 = RAX & 15
+            printf("    jnz .Lcall%d\n", seq);
+            printf("    mov rax, 0\n");
             printf("    call %s\n", node->funcname);
+            printf("    jmp .Lend%d\n", seq);
+            printf(".Lcall%d:\n", seq);
+            printf("    sub rsp, 8\n");
+            printf("    mov rax, 0\n");
+            printf("    call %s\n", node->funcname);
+            printf("    add rsp, 8\n");
+            printf(".Lend%d:\n", seq);
             printf("    push rax\n");
             return;
         }
