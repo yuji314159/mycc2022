@@ -33,6 +33,12 @@ void error_at(char *loc, char *fmt, ...) {
     exit(1);
 }
 
+char *strndup(const char *s, size_t n) {
+    char *t = malloc(n + 1);
+    strncpy(t, s, n);
+    return t;
+}
+
 bool consume(char *op) {
     if (token->kind != TK_RESERVED ||
             strlen(op) != token->len ||
@@ -237,6 +243,13 @@ Node *primary() {
 
     Token *tok = consume_ident();
     if (tok) {
+        if (consume("(")) {
+            expect(")");
+            Node *node = calloc(1, sizeof(Node));
+            node->kind = ND_FUNCALL;
+            node->funcname = strndup(tok->str, tok->len);
+            return node;
+        }
         return new_node_lvar(tok);
     }
 

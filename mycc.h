@@ -39,6 +39,7 @@ typedef enum {
     ND_WHILE,
     ND_FOR,
     ND_BLOCK,
+    ND_FUNCALL,
 } NodeKind;
 
 typedef struct Node Node;
@@ -58,6 +59,9 @@ struct Node {
 
     // block
     Node *body;
+
+    // function call
+    char *funcname;
 
     int val;
     int offset;
