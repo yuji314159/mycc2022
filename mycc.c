@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "mycc.h"
 
 int main(int argc, char *argv[]) {
@@ -10,6 +8,12 @@ int main(int argc, char *argv[]) {
     user_input = argv[1];
     token = tokenize(user_input);
     program();
+
+    int offset = 0;
+    for (LVar *lvar = locals; lvar; lvar = lvar->next) {
+        lvar->offset = offset;
+        offset += 8;
+    }
 
     printf(".intel_syntax noprefix\n");
     printf(".globl main\n");

@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "mycc.h"
 
 int labelseq = 0;
@@ -11,7 +9,7 @@ void gen_lvar(Node *node) {
     }
 
     printf("    mov rax, rbp\n");
-    printf("    sub rax, %d\n", node->offset);
+    printf("    sub rax, %d\n", node->lvar->offset);
     printf("    push rax\n");
 }
 

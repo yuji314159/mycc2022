@@ -1,10 +1,12 @@
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 typedef enum {
     TK_RESERVED,
-    TK_RETURN,
-    TK_IF,
-    TK_ELSE,
-    TK_WHILE,
-    TK_FOR,
     TK_IDENT,
     TK_NUM,
     TK_EOF,
@@ -42,11 +44,21 @@ typedef enum {
     ND_FUNCALL,
 } NodeKind;
 
+typedef struct LVar LVar;
+
+struct LVar {
+    LVar *next;
+    char *name;
+    int offset;
+};
+
 typedef struct Node Node;
 
 struct Node {
     NodeKind kind;
     Node *next;
+
+    // operator
     Node *lhs;
     Node *rhs;
 
@@ -65,24 +77,33 @@ struct Node {
     Node *args;
 
     int val;
-    int offset;
+    LVar *lvar;
 };
 
-typedef struct LVar LVar;
+// typedef struct Function Function;
 
-struct LVar {
-    LVar *next;
-    char *name;
-    int len;
-    int offset;
-};
+// struct Function {
+//     Function *next;
+//     char *name;
+//     Node *node;
+//     LVar *locals;
+//     int stack_size;
+// };
 
 extern char *user_input;
 extern Token *token;
+void error(char *fmt, ...);
+char *strndup(const char *s, size_t n);
+bool consume(char *op);
+Token *consume_ident();
+bool expect(char *op);
+char *expect_ident();
+int expect_number();
+bool at_eof();
+Token *tokenize(char *p);
+
 extern Node *code[100];
 extern LVar *locals;
-void error(char *fmt, ...);
-Token *tokenize(char *p);
 void program();
 
 void gen(Node *node);

@@ -1,235 +1,54 @@
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "mycc.h"
 
-char *user_input;
-Token *token;
 Node *code[100];
 LVar *locals;
 
-void error(char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    exit(1);
-}
-
-void error_at(char *loc, char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-
-    int pos = loc - user_input;
-    fprintf(stderr, "%s\n", user_input);
-    fprintf(stderr, "%*s", pos, "");
-    fprintf(stderr, "^ ");
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    exit(1);
-}
-
-char *strndup(const char *s, size_t n) {
-    char *t = malloc(n + 1);
-    strncpy(t, s, n);
-    return t;
-}
-
-bool consume(char *op) {
-    if (token->kind != TK_RESERVED ||
-            strlen(op) != token->len ||
-            memcmp(token->str, op, token->len)) {
-        return false;
-    }
-    token = token->next;
-    return true;
-}
-
-bool consume_return() {
-    if (token->kind != TK_RETURN) {
-        return false;
-    }
-    token = token->next;
-    return true;
-}
-
-bool consume_if() {
-    if (token->kind != TK_IF) {
-        return false;
-    }
-    token = token->next;
-    return true;
-}
-
-bool consume_else() {
-    if (token->kind != TK_ELSE) {
-        return false;
-    }
-    token = token->next;
-    return true;
-}
-
-bool consume_while() {
-    if (token->kind != TK_WHILE) {
-        return false;
-    }
-    token = token->next;
-    return true;
-}
-
-bool consume_for() {
-    if (token->kind != TK_FOR) {
-        return false;
-    }
-    token = token->next;
-    return true;
-}
-
-Token *consume_ident() {
-    if (token->kind != TK_IDENT) {
-        return false;
-    }
-    Token *tok = token;
-    token = token->next;
-    return tok;
-}
-
-bool expect(char *op) {
-    if (token->kind != TK_RESERVED ||
-            strlen(op) != token->len ||
-            memcmp(token->str, op, token->len)) {
-        error_at(token->str, "\"%s\" ではありません", op);
-    }
-    token = token->next;
-}
-
-int expect_number() {
-    if (token->kind != TK_NUM) {
-        error_at(token->str, "数ではありません");
-    }
-    int val = token->val;
-    token = token->next;
-    return val;
-}
-
-bool at_eof() {
-    return token->kind == TK_EOF;
-}
-
-Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
-    Token *tok = calloc(1, sizeof(Token));
-    tok->kind = kind;
-    tok->str = str;
-    tok->len = len;
-    cur->next = tok;
-    return tok;
-}
-
-Token *tokenize(char *p) {
-    Token head;
-    head.next = NULL;
-    Token *cur = &head;
-
-    while (*p) {
-        if (isspace(*p)) {
-            ++p;
-        } else if (
-                memcmp(p, "<=", 2) == 0 || memcmp(p, ">=", 2) == 0 ||
-                memcmp(p, "==", 2) == 0 || memcmp(p, "!=", 2) == 0) {
-            cur = new_token(TK_RESERVED, cur, p, 2);
-            p += 2;
-        } else if (
-                *p == '+' || *p == '-' || *p == '*' || *p == '/' ||
-                *p == '(' || *p == ')' || *p == '<' || *p == '>' ||
-                *p == '=' || *p == ';' ||
-                *p == '{' || *p == '}' || *p == ',') {
-            cur = new_token(TK_RESERVED, cur, p++, 1);
-        } else if (strncmp(p, "return", 6) == 0 && !isalnum(p[6]) && p[6] != '_') {
-            cur = new_token(TK_RETURN, cur, p, 6);
-            p += 6;
-        } else if (strncmp(p, "if", 2) == 0 && !isalnum(p[2]) && p[2] != '_') {
-            cur = new_token(TK_IF, cur, p, 2);
-            p += 2;
-        } else if (strncmp(p, "else", 4) == 0 && !isalnum(p[4]) && p[4] != '_') {
-            cur = new_token(TK_ELSE, cur, p, 4);
-            p += 4;
-        } else if (strncmp(p, "while", 5) == 0 && !isalnum(p[5]) && p[5] != '_') {
-            cur = new_token(TK_WHILE, cur, p, 5);
-            p += 5;
-        } else if (strncmp(p, "for", 3) == 0 && !isalnum(p[3]) && p[3] != '_') {
-            cur = new_token(TK_FOR, cur, p, 3);
-            p += 3;
-        } else if (isalpha(*p) || *p == '_') {
-            int len = 1;
-            while (isalnum(p[len]) || p[len] == '_') {
-                ++len;
-            }
-            cur = new_token(TK_IDENT, cur, p, len);
-            p += len;
-        } else if (isdigit(*p)) {
-            cur = new_token(TK_NUM, cur, p, 0);
-            cur->val = strtol(p, &p, 10);
-        } else {
-            error_at(p, "トークナイズできません");
-        }
-    }
-
-    new_token(TK_EOF, cur, p, 0);
-    return head.next;
-}
-
-LVar *find_lvar(Token *tok) {
-    for (LVar *var = locals; var; var = var->next) {
-        if (var->len == tok->len && memcmp(var->name, tok->str, var->len) == 0) {
-            return var;
-        }
-    }
-    return NULL;
-}
-
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
+Node *new_node(NodeKind kind) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
+    return node;
+}
+
+Node *new_node_unary(NodeKind kind, Node *expr) {
+    Node *node = new_node(kind);
+    node->lhs = expr;
+    return node;
+}
+
+Node *new_node_binary(NodeKind kind, Node *lhs, Node *rhs) {
+    Node *node = new_node(kind);
     node->lhs = lhs;
     node->rhs = rhs;
     return node;
 }
 
-Node *new_node_return(Node *lhs) {
-    Node *node = calloc(1, sizeof(Node));
-    node->kind = ND_RETURN;
-    node->lhs = lhs;
-    return node;
-}
-
 Node *new_node_num(int val) {
-    Node *node = calloc(1, sizeof(Node));
-    node->kind = ND_NUM;
+    Node *node = new_node(ND_NUM);
     node->val = val;
     return node;
 }
 
-Node *new_node_lvar(Token *tok) {
-    Node *node = calloc(1, sizeof(Node));
-    node->kind = ND_LVAR;
-
-    LVar *lvar = find_lvar(tok);
-    if (lvar) {
-        node->offset = lvar->offset;
-    } else {
-        lvar = calloc(1, sizeof(LVar));
-        lvar->next = locals;
-        lvar->name = tok->str;
-        lvar->len = tok->len;
-        lvar->offset = locals ? locals->offset + 8 : 0;
-        node->offset = lvar->offset;
-        locals = lvar;
-    }
+Node *new_node_lvar(LVar *lvar) {
+    Node *node = new_node(ND_LVAR);
+    node->lvar = lvar;
     return node;
+}
+
+LVar *push_lvar(char *name) {
+    LVar *lvar = calloc(1, sizeof(LVar));
+    lvar->next = locals;
+    lvar->name = name;
+    locals = lvar;
+    return lvar;
+}
+
+LVar *find_lvar(Token *tok) {
+    for (LVar *var = locals; var; var = var->next) {
+        if (strlen(var->name) == tok->len && memcmp(var->name, tok->str, tok->len) == 0) {
+            return var;
+        }
+    }
+    return NULL;
 }
 
 Node *expr();
@@ -259,13 +78,17 @@ Node *primary() {
     Token *tok = consume_ident();
     if (tok) {
         if (consume("(")) {
-            Node *node = calloc(1, sizeof(Node));
-            node->kind = ND_FUNCALL;
+            Node *node = new_node(ND_FUNCALL);
             node->funcname = strndup(tok->str, tok->len);
             node->args = funcargs();
             return node;
         }
-        return new_node_lvar(tok);
+
+        LVar *lvar = find_lvar(tok);
+        if (!lvar) {
+            lvar = push_lvar(strndup(tok->str, tok->len));
+        }
+        return new_node_lvar(lvar);
     }
 
     return new_node_num(expect_number());
@@ -273,9 +96,9 @@ Node *primary() {
 
 Node *unary() {
     if (consume("+")) {
-        return primary();
+        return unary();
     } else if (consume("-")) {
-        return new_node(ND_SUB, new_node_num(0), primary());
+        return new_node_binary(ND_SUB, new_node_num(0), unary());
     } else {
         return primary();
     }
@@ -286,9 +109,9 @@ Node *mul() {
 
     for(;;) {
         if (consume("*")) {
-            node = new_node(ND_MUL, node, unary());
+            node = new_node_binary(ND_MUL, node, unary());
         } else if (consume("/")) {
-            node = new_node(ND_DIV, node, unary());
+            node = new_node_binary(ND_DIV, node, unary());
         } else {
             return node;
         }
@@ -300,9 +123,9 @@ Node *add() {
 
     for(;;) {
         if (consume("+")) {
-            node = new_node(ND_ADD, node, mul());
+            node = new_node_binary(ND_ADD, node, mul());
         } else if (consume("-")) {
-            node = new_node(ND_SUB, node, mul());
+            node = new_node_binary(ND_SUB, node, mul());
         } else {
             return node;
         }
@@ -314,15 +137,15 @@ Node *relational() {
 
     for (;;) {
         if (consume("<")) {
-            node = new_node(ND_LT, node, add());
+            node = new_node_binary(ND_LT, node, add());
         } else if (consume("<=")) {
-            node = new_node(ND_LE, node, add());
+            node = new_node_binary(ND_LE, node, add());
         } else if (consume(">")) {
             // lhs > rhs == rhs < lhs
-            node = new_node(ND_LT, add(), node);
+            node = new_node_binary(ND_LT, add(), node);
         } else if (consume(">=")) {
             // lhs >= rhs == rhs <= lhs
-            node = new_node(ND_LE, add(), node);
+            node = new_node_binary(ND_LE, add(), node);
         } else {
             return node;
         }
@@ -334,9 +157,9 @@ Node *equality() {
 
     for (;;) {
         if (consume("==")) {
-            node = new_node(ND_EQ, node, relational());
+            node = new_node_binary(ND_EQ, node, relational());
         } else if (consume("!=")) {
-            node = new_node(ND_NE, node, relational());
+            node = new_node_binary(ND_NE, node, relational());
         } else {
             return node;
         }
@@ -348,7 +171,7 @@ Node *assign() {
 
     for(;;) {
         if (consume("=")) {
-            node = new_node(ND_ASSIGN, node, assign());
+            node = new_node_binary(ND_ASSIGN, node, assign());
         } else {
             return node;
         }
@@ -361,29 +184,26 @@ Node *expr() {
 
 Node *stmt() {
     Node *node;
-    if (consume_return()) {
-        node = new_node_return(expr());
+    if (consume("return")) {
+        node = new_node_unary(ND_RETURN, expr());
         expect(";");
-    } else if (consume_if()) {
-        node = calloc(1, sizeof(Node));
-        node->kind = ND_IF;
+    } else if (consume("if")) {
+        node = new_node(ND_IF);
         expect("(");
         node->cond = expr();
         expect(")");
         node->then = stmt();
-        if (consume_else()) {
+        if (consume("else")) {
             node->els = stmt();
         }
-    } else if (consume_while()) {
-        node = calloc(1, sizeof(Node));
-        node->kind = ND_WHILE;
+    } else if (consume("while")) {
+        node = new_node(ND_WHILE);
         expect("(");
         node->cond = expr();
         expect(")");
         node->then = stmt();
-    } else if (consume_for()) {
-        node = calloc(1, sizeof(Node));
-        node->kind = ND_FOR;
+    } else if (consume("for")) {
+        node = new_node(ND_FOR);
         expect("(");
         if (!consume(";")) {
             node->init = expr();
@@ -408,8 +228,7 @@ Node *stmt() {
             cur = cur->next;
         }
 
-        node = calloc(1, sizeof(Node));
-        node->kind = ND_BLOCK;
+        node = new_node(ND_BLOCK);
         node->body = head.next;
     } else {
         node = expr();
