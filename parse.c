@@ -237,10 +237,38 @@ Node *stmt() {
     return node;
 }
 
-void program() {
-    int i = 0;
-    while (!at_eof()) {
-        code[i++] = stmt();
+Function *function() {
+    locals = NULL;
+
+    char *name = expect_ident();
+    expect("(");
+    expect(")");
+    expect("{");
+
+    Node head;
+    head.next = NULL;
+    Node *cur = &head;
+
+    while (!consume("}")) {
+        cur->next = stmt();
+        cur = cur->next;
     }
-    code[i] = NULL;
+
+    Function *fn = calloc(1, sizeof(Function));
+    fn->name = name;
+    fn->node = head.next;
+    fn->locals = locals;
+    return fn;
+}
+
+Function *program() {
+    Function head;
+    head.next = NULL;
+    Function *cur = &head;
+
+    while (!at_eof()) {
+        cur->next = function();
+        cur = cur->next;
+    }
+    return head.next;
 }

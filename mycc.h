@@ -80,15 +80,15 @@ struct Node {
     LVar *lvar;
 };
 
-// typedef struct Function Function;
+typedef struct Function Function;
 
-// struct Function {
-//     Function *next;
-//     char *name;
-//     Node *node;
-//     LVar *locals;
-//     int stack_size;
-// };
+struct Function {
+    Function *next;
+    char *name;
+    Node *node;
+    LVar *locals;
+    int stack_size;
+};
 
 extern char *user_input;
 extern Token *token;
@@ -104,6 +104,6 @@ Token *tokenize(char *p);
 
 extern Node *code[100];
 extern LVar *locals;
-void program();
+Function *program();
 
 void gen(Node *node);
