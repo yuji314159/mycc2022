@@ -3,14 +3,21 @@
 int labelseq = 0;
 char *argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
+void gen(Node *node);
+
 void gen_lvar(Node *node) {
-    if (node->kind != ND_LVAR) {
-        error("代入の左辺値が変数ではありません");
+    switch (node->kind) {
+        case ND_LVAR:
+            printf("    mov rax, rbp\n");
+            printf("    sub rax, %d\n", node->lvar->offset);
+            printf("    push rax\n");
+            return;
+        case ND_DEREF:
+            gen(node->lhs);
+            return;
     }
 
-    printf("    mov rax, rbp\n");
-    printf("    sub rax, %d\n", node->lvar->offset);
-    printf("    push rax\n");
+    error("代入の左辺値が変数ではありません");
 }
 
 void load() {
@@ -135,6 +142,13 @@ void gen(Node *node) {
             gen_lvar(node->lhs);
             gen(node->rhs);
             store();
+            return;
+        case ND_ADDR:
+            gen_lvar(node->lhs);
+            return;
+        case ND_DEREF:
+            gen(node->lhs);
+            load();
             return;
     }
 

@@ -111,7 +111,7 @@ char *starts_with_reserved(char *p) {
         }
     }
 
-    if (strchr("+-*/()<>=;{},", p[0])) {
+    if (strchr("+-*/()<>=;{},&", p[0])) {
         return strndup(p, 1);
     }
 

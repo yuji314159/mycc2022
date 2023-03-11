@@ -99,6 +99,10 @@ Node *unary() {
         return unary();
     } else if (consume("-")) {
         return new_node_binary(ND_SUB, new_node_num(0), unary());
+    } else if (consume("&")) {
+        return new_node_unary(ND_ADDR, unary());
+    } else if (consume("*")) {
+        return new_node_unary(ND_DEREF, unary());
     } else {
         return primary();
     }

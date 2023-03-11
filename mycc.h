@@ -35,6 +35,8 @@ typedef enum {
     ND_EQ,
     ND_NE,
     ND_ASSIGN,
+    ND_ADDR,
+    ND_DEREF,
     ND_LVAR,
     ND_RETURN,
     ND_IF,
