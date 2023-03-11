@@ -109,7 +109,7 @@ void gen(Node *node) {
             // RSP must be aligned to a 16 byte boundary
             int seq = labelseq++;
             printf("    mov rax, rsp\n");
-            printf("    add rax, 15\n");    // RAX = RAX / 16 = RAX & 15
+            printf("    and rax, 15\n");    // RAX = RAX % 16 = RAX & 15
             printf("    jnz .Lcall%d\n", seq);
             printf("    mov rax, 0\n");
             printf("    call %s\n", node->funcname);
@@ -127,6 +127,7 @@ void gen(Node *node) {
             printf("    push %d\n", node->val);
             return;
         case ND_LVAR:
+            printf("# %s\n", node->lvar->name);
             gen_lvar(node);
             load();
             return;
@@ -180,4 +181,27 @@ void gen(Node *node) {
     }
 
     printf("    push rax\n");
+}
+
+void codegen(Function *prog) {
+    printf(".intel_syntax noprefix\n");
+
+    for (Function *fn = prog; fn; fn = fn->next) {
+        printf(".globl %s\n", fn->name);
+        printf("%s:\n", fn->name);
+
+        printf("    push rbp\n");
+        printf("    mov rbp, rsp\n");
+        printf("    sub rsp, %d\n", fn->stack_size);
+
+        int i = fn->param_count;
+        for (LVar *lvar = fn->params; lvar; lvar = lvar->next) {
+            printf("# %s\n", lvar->name);
+            printf("    mov [rbp - %d], %s\n", lvar->offset, argregs[--i]);
+        }
+
+        for (Node *node = fn->node; node; node = node->next) {
+            gen(node);
+        }
+    }
 }

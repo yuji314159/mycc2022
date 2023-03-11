@@ -85,6 +85,9 @@ typedef struct Function Function;
 struct Function {
     Function *next;
     char *name;
+    LVar *params;
+    int param_count;
+
     Node *node;
     LVar *locals;
     int stack_size;
@@ -106,4 +109,4 @@ extern Node *code[100];
 extern LVar *locals;
 Function *program();
 
-void gen(Node *node);
+void codegen(Function *prog);

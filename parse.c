@@ -237,12 +237,33 @@ Node *stmt() {
     return node;
 }
 
+LVar *funcparams() {
+    if (consume(")")) {
+        return NULL;
+    }
+
+    LVar *head = push_lvar(expect_ident());
+    while (consume(",")) {
+        push_lvar(expect_ident());
+    }
+    expect(")");
+    return locals;
+}
+
+int param_count(LVar *lvar) {
+    int i = 0;
+    while (lvar) lvar = lvar->next, ++i;
+    return i;
+}
+
 Function *function() {
     locals = NULL;
 
-    char *name = expect_ident();
+    Function *fn = calloc(1, sizeof(Function));
+    fn->name = expect_ident();
     expect("(");
-    expect(")");
+    fn->params = funcparams();
+    fn->param_count = param_count(fn->params);
     expect("{");
 
     Node head;
@@ -254,8 +275,6 @@ Function *function() {
         cur = cur->next;
     }
 
-    Function *fn = calloc(1, sizeof(Function));
-    fn->name = name;
     fn->node = head.next;
     fn->locals = locals;
     return fn;
