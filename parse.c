@@ -86,7 +86,7 @@ Node *primary() {
 
         LVar *lvar = find_lvar(tok);
         if (!lvar) {
-            lvar = push_lvar(strndup(tok->str, tok->len));
+            error("未定義の変数です");
         }
         return new_node_lvar(lvar);
     }
@@ -234,6 +234,10 @@ Node *stmt() {
 
         node = new_node(ND_BLOCK);
         node->body = head.next;
+    } else if (consume("int")) {
+        node = new_node(ND_NULL);
+        LVar *head = push_lvar(expect_ident());
+        expect(";");
     } else {
         node = expr();
         expect(";");
@@ -246,8 +250,10 @@ LVar *funcparams() {
         return NULL;
     }
 
+    expect("int");
     LVar *head = push_lvar(expect_ident());
     while (consume(",")) {
+        expect("int");
         push_lvar(expect_ident());
     }
     expect(")");
@@ -264,6 +270,7 @@ Function *function() {
     locals = NULL;
 
     Function *fn = calloc(1, sizeof(Function));
+    expect("int");
     fn->name = expect_ident();
     expect("(");
     fn->params = funcparams();

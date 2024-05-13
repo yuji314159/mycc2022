@@ -95,8 +95,7 @@ bool starts_with(char *p, char *q) {
 }
 
 char *starts_with_reserved(char *p) {
-
-    static char *kws[] = {"return", "if", "else", "while", "for"};
+    static char *kws[] = {"return", "if", "else", "while", "for", "int"};
     for (int i = 0; i < sizeof(kws) / sizeof(*kws); ++i) {
         char next = p[strlen(kws[i])];
         if (starts_with(p, kws[i]) && !isalnum(next) && next != '_') {

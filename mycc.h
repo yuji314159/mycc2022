@@ -44,6 +44,7 @@ typedef enum {
     ND_FOR,
     ND_BLOCK,
     ND_FUNCALL,
+    ND_NULL,
 } NodeKind;
 
 typedef struct LVar LVar;
