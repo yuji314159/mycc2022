@@ -3,6 +3,19 @@
 Node *code[100];
 LVar *locals;
 
+Type *int_type() {
+    Type *type = calloc(1, sizeof(Type));
+    type->type = TY_INT;
+    return type;
+}
+
+Type *ptr_to(Type *base) {
+    Type *type = calloc(1, sizeof(Type));
+    type->type = TY_PTR;
+    type->ptr_to = base;
+    return type;
+}
+
 Node *new_node(NodeKind kind) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
@@ -34,10 +47,11 @@ Node *new_node_lvar(LVar *lvar) {
     return node;
 }
 
-LVar *push_lvar(char *name) {
+LVar *push_lvar(char *name, Type *type) {
     LVar *lvar = calloc(1, sizeof(LVar));
     lvar->next = locals;
     lvar->name = name;
+    lvar->type = type;
     locals = lvar;
     return lvar;
 }
@@ -236,7 +250,11 @@ Node *stmt() {
         node->body = head.next;
     } else if (consume("int")) {
         node = new_node(ND_NULL);
-        LVar *head = push_lvar(expect_ident());
+        Type *type = int_type();
+        while (consume("*")) {
+            type = ptr_to(type);
+        }
+        LVar *head = push_lvar(expect_ident(), type);
         expect(";");
     } else {
         node = expr();
@@ -251,10 +269,18 @@ LVar *funcparams() {
     }
 
     expect("int");
-    LVar *head = push_lvar(expect_ident());
+    Type *type = int_type();
+    while (consume("*")) {
+        type = ptr_to(type);
+    }
+    LVar *head = push_lvar(expect_ident(), type);
     while (consume(",")) {
         expect("int");
-        push_lvar(expect_ident());
+        Type *type = int_type();
+        while (consume("*")) {
+            type = ptr_to(type);
+        }
+        push_lvar(expect_ident(), type);
     }
     expect(")");
     return locals;

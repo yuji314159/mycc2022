@@ -47,12 +47,23 @@ typedef enum {
     ND_NULL,
 } NodeKind;
 
+typedef struct Type Type;
+
+struct Type {
+    enum {
+        TY_INT,
+        TY_PTR,
+    } type;
+    struct Type *ptr_to;
+};
+
 typedef struct LVar LVar;
 
 struct LVar {
     LVar *next;
     char *name;
     int offset;
+    Type *type;
 };
 
 typedef struct Node Node;
