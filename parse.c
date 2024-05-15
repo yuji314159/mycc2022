@@ -24,12 +24,48 @@ Node *new_node(NodeKind kind) {
 
 Node *new_node_unary(NodeKind kind, Node *expr) {
     Node *node = new_node(kind);
+    if (kind == ND_ADDR) {
+        node->type = ptr_to(expr->type);
+    } else if (kind == ND_DEREF) {
+        if (expr->type->type == TY_PTR) {
+            node->type = expr->type;
+        } else {
+            // int型の即値をderefしたらint型として扱う
+            node->type = int_type();
+        }
+    } else {
+        node->type = expr->type;
+    }
     node->lhs = expr;
     return node;
 }
 
 Node *new_node_binary(NodeKind kind, Node *lhs, Node *rhs) {
     Node *node = new_node(kind);
+    if (kind == ND_ASSIGN) {
+        node->type = lhs->type;
+    } else if (kind == ND_ADD) {
+        // rhsの型がポインターだったら左右を入れ替える
+        if (rhs->type->type == TY_PTR) {
+            Node *tmp = lhs;
+            lhs = rhs;
+            rhs = tmp;
+        }
+        // それでもrhsの型がポインターだったらエラー (ポインター同士の足し算はできない)
+        if (rhs->type->type == TY_PTR) {
+            error("ポインター同士の足し算はできません");
+        }
+        node->type = lhs->type;
+    } else if (kind == ND_SUB) {
+        // rhsの型がポインターだったらエラー (ポインターの引き算はできない)
+        if (rhs->type->type == TY_PTR) {
+            error("ポインターの引き算はできません");
+        }
+        node->type = lhs->type;
+    } else {
+        // 本来は `==` とかの型はboolになる?
+        node->type = int_type();
+    }
     node->lhs = lhs;
     node->rhs = rhs;
     return node;
@@ -37,12 +73,14 @@ Node *new_node_binary(NodeKind kind, Node *lhs, Node *rhs) {
 
 Node *new_node_num(int val) {
     Node *node = new_node(ND_NUM);
+    node->type = int_type();
     node->val = val;
     return node;
 }
 
 Node *new_node_lvar(LVar *lvar) {
     Node *node = new_node(ND_LVAR);
+    node->type = lvar->type;
     node->lvar = lvar;
     return node;
 }
@@ -93,6 +131,8 @@ Node *primary() {
     if (tok) {
         if (consume("(")) {
             Node *node = new_node(ND_FUNCALL);
+            // TODO: 関数の戻り値の型を `int` と仮定している
+            node->type = int_type();
             node->funcname = strndup(tok->str, tok->len);
             node->args = funcargs();
             return node;

@@ -95,10 +95,11 @@ assert 55 'int main() { return fib(9); } int fib(int x) { if (x<=1) return 1; re
 
 assert 3 'int main() { int x; x=3; return *&x; }'
 assert 3 'int main() { int x; x=3; int *y; y=&x; int z; z=&y; return **z; }'
-assert 5 'int main() { int x; x=3; int y; y=5; return *(&x+8); }'
-assert 3 'int main() { int x; x=3; int y; y=5; return *(&y-8); }'
+assert 3 'int main() { int x; x=3; int *y; y=&x; int z; z=&y; return *(&z-2); }'
+assert 5 'int main() { int x; x=3; int y; y=5; return *(&x+1); }'
+assert 3 'int main() { int x; x=3; int y; y=5; return *(&y-1); }'
 assert 5 'int main() { int x; x=3; int *y; y=&x; *y=5; return x; }'
-assert 7 'int main() { int x; x=3; int y; y=5; *(&x+8)=7; return y; }'
-assert 7 'int main() { int x; x=3; int y; y=5; *(&y-8)=7; return x; }'
+assert 7 'int main() { int x; x=3; int y; y=5; *(&x+1)=7; return y; }'
+assert 7 'int main() { int x; x=3; int y; y=5; *(&y-1)=7; return x; }'
 
 echo OK
