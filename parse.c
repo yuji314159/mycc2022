@@ -157,6 +157,9 @@ Node *unary() {
         return new_node_unary(ND_ADDR, unary());
     } else if (consume("*")) {
         return new_node_unary(ND_DEREF, unary());
+    } else if (consume("sizeof")) {
+        Node *node = unary();
+        return new_node_num(node->type->type == TY_INT ? 8 : 8);
     } else {
         return primary();
     }
