@@ -53,8 +53,10 @@ struct Type {
     enum {
         TY_INT,
         TY_PTR,
+        TY_ARRAY,
     } type;
     struct Type *ptr_to;
+    size_t len;
 };
 
 typedef struct LVar LVar;
@@ -125,3 +127,5 @@ extern LVar *locals;
 Function *program();
 
 void codegen(Function *prog);
+
+void debug_type(Type *type);

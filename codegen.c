@@ -138,9 +138,15 @@ void gen(Node *node) {
         case ND_LVAR:
             printf("# %s\n", node->lvar->name);
             gen_lvar(node);
-            load();
+            // 配列はポインターのように扱うため、アドレスのままにする (loadしない)
+            if (node->type->type != TY_ARRAY) {
+                load();
+            }
             return;
         case ND_ASSIGN:
+            if (node->type->type == TY_ARRAY) {
+                error("代入の左辺値に配列は指定できません");
+            }
             gen_lvar(node->lhs);
             gen(node->rhs);
             store();
@@ -150,7 +156,10 @@ void gen(Node *node) {
             return;
         case ND_DEREF:
             gen(node->lhs);
-            load();
+            // 配列はポインターのように扱うため、アドレスのままにする (loadしない)
+            if (node->type->type != TY_ARRAY) {
+                load();
+            }
             return;
     }
 
@@ -162,13 +171,13 @@ void gen(Node *node) {
 
     switch (node->kind) {
         case ND_ADD:
-            if (node->type->type == TY_PTR) {
+            if (node->type->type == TY_PTR || node->type->type == TY_ARRAY) {
                 printf("    imul rdi, 8\n");
             }
             printf("    add rax, rdi\n");
             break;
         case ND_SUB:
-            if (node->type->type == TY_PTR) {
+            if (node->type->type == TY_PTR || node->type->type == TY_ARRAY) {
                 printf("    imul rdi, 8\n");
             }
             printf("    sub rax, rdi\n");
