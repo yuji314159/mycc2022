@@ -194,7 +194,13 @@ Node *unary() {
             return new_node_num(8 * node->type->len);
         }
     } else {
-        return primary();
+        Node *node = primary();
+        if (consume("[")) {
+            // `x[y]` は `*(x + y)` と等価
+            node = new_node_unary(ND_DEREF, new_node_binary(ND_ADD, node, expr()));
+            expect("]");
+        }
+        return node;
     }
 }
 
