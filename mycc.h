@@ -64,8 +64,9 @@ typedef struct LVar LVar;
 struct LVar {
     LVar *next;
     char *name;
-    int offset;
     Type *type;
+    bool is_local;
+    int offset;
 };
 
 typedef struct Node Node;
@@ -110,6 +111,12 @@ struct Function {
     int stack_size;
 };
 
+typedef struct Program Program;
+struct Program {
+    Function *fns;
+    LVar *globals;
+};
+
 extern char *user_input;
 extern Token *token;
 void error(char *fmt, ...);
@@ -124,8 +131,9 @@ Token *tokenize(char *p);
 
 extern Node *code[100];
 extern LVar *locals;
-Function *program();
+extern LVar *globals;
+Program *program();
 
-void codegen(Function *prog);
+void codegen(Program *prog);
 
 void debug_type(Type *type);

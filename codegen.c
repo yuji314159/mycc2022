@@ -8,9 +8,14 @@ void gen(Node *node);
 void gen_lvar(Node *node) {
     switch (node->kind) {
         case ND_LVAR:
-            printf("    mov rax, rbp\n");
-            printf("    sub rax, %d\n", node->lvar->offset);
-            printf("    push rax\n");
+            if (node->lvar->is_local) {
+                printf("    mov rax, rbp\n");
+                printf("    sub rax, %d\n", node->lvar->offset);
+                printf("    push rax\n");
+            } else {
+                printf("    lea rax, %s[rip]\n", node->lvar->name);
+                printf("    push rax\n");
+            }
             return;
         case ND_DEREF:
             gen(node->lhs);
@@ -214,10 +219,24 @@ void gen(Node *node) {
     printf("    push rax\n");
 }
 
-void codegen(Function *prog) {
+void codegen(Program *prog) {
     printf(".intel_syntax noprefix\n");
 
-    for (Function *fn = prog; fn; fn = fn->next) {
+    // data section
+    printf(".data\n");
+    for (LVar *lvar = prog->globals; lvar; lvar = lvar->next) {
+        printf("%s:\n", lvar->name);
+        // TODO: 1次元配列のみ対応
+        size_t len = 8;
+        if (lvar->type->type == TY_ARRAY) {
+            len *= lvar->type->len;
+        }
+        printf("    .zero %d\n", len);
+    }
+
+    // text section
+    printf(".text\n");
+    for (Function *fn = prog->fns; fn; fn = fn->next) {
         printf(".globl %s\n", fn->name);
         printf("%s:\n", fn->name);
 

@@ -2,6 +2,7 @@
 
 Node *code[100];
 LVar *locals;
+LVar *globals;
 
 void debug_type(Type *type) {
     printf("#");
@@ -9,10 +10,10 @@ void debug_type(Type *type) {
         printf(" int");
     } else if (type->type == TY_PTR) {
         printf(" pointer to");
-        // debug_type(type->ptr_to);
+        debug_type(type->ptr_to);
     } else if (type->type == TY_ARRAY) {
         printf(" array[%d] of", type->len);
-        // debug_type(type->ptr_to);
+        debug_type(type->ptr_to);
     } else {
         printf(" ERROR");
     }
@@ -113,12 +114,20 @@ Node *new_node_lvar(LVar *lvar) {
     return node;
 }
 
-LVar *push_lvar(char *name, Type *type) {
+LVar *push_lvar(char *name, Type *type, bool is_local) {
     LVar *lvar = calloc(1, sizeof(LVar));
-    lvar->next = locals;
     lvar->name = name;
     lvar->type = type;
-    locals = lvar;
+    lvar->is_local = is_local;
+
+    if (is_local) {
+        lvar->next = locals;
+        locals = lvar;
+    } else {
+        lvar->next = globals;
+        globals = lvar;
+    }
+
     return lvar;
 }
 
@@ -128,6 +137,13 @@ LVar *find_lvar(Token *tok) {
             return var;
         }
     }
+
+    for (LVar *var = globals; var; var = var->next) {
+        if (strlen(var->name) == tok->len && memcmp(var->name, tok->str, tok->len) == 0) {
+            return var;
+        }
+    }
+
     return NULL;
 }
 
@@ -342,7 +358,7 @@ Node *stmt() {
             type = array_of(type, expect_number());
             expect("]");
         }
-        LVar *head = push_lvar(name, type);
+        LVar *head = push_lvar(name, type, true);
         expect(";");
     } else {
         node = expr();
@@ -361,7 +377,13 @@ LVar *funcparams() {
     while (consume("*")) {
         type = ptr_to(type);
     }
-    LVar *head = push_lvar(expect_ident(), type);
+    char *name = expect_ident();
+    // TODO: 1次元配列のみ対応
+    if (consume("[")) {
+        type = array_of(type, expect_number());
+        expect("]");
+    }
+    push_lvar(name, type, true);
     while (consume(",")) {
         expect("int");
         Type *type = int_type();
@@ -374,7 +396,7 @@ LVar *funcparams() {
             type = array_of(type, expect_number());
             expect("]");
         }
-        push_lvar(name, type);
+        push_lvar(name, type, true);
     }
     expect(")");
     return locals;
@@ -411,14 +433,56 @@ Function *function() {
     return fn;
 }
 
-Function *program() {
+void global_var() {
+    expect("int");
+    Type *type = int_type();
+    while (consume("*")) {
+        type = ptr_to(type);
+    }
+    char *name = expect_ident();
+    // TODO: 1次元配列のみ対応
+    if (consume("[")) {
+        type = array_of(type, expect_number());
+        expect("]");
+    }
+    expect(";");
+    push_lvar(name, type, false);
+}
+
+bool is_function() {
+    Token *tok = token;
+
+    expect("int");
+    while (consume("*")) {}
+    expect_ident();
+    // TODO: 1次元配列のみ対応
+    if (consume("[")) {
+        expect_number();
+        expect("]");
+    }
+    bool isfunc = consume("(");
+
+    token = tok;
+    return isfunc;
+}
+
+Program *program() {
     Function head;
     head.next = NULL;
     Function *cur = &head;
+    globals = NULL;
 
     while (!at_eof()) {
-        cur->next = function();
-        cur = cur->next;
+        if (is_function()) {
+            cur->next = function();
+            cur = cur->next;
+        } else {
+            global_var();
+        }
     }
-    return head.next;
+
+    Program *prog = calloc(1, sizeof(Program));
+    prog->fns = head.next;
+    prog->globals = globals;
+    return prog;
 }
