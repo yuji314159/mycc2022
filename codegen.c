@@ -1,7 +1,8 @@
 #include "mycc.h"
 
 int labelseq = 0;
-char *argregs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+char *argregs1[] = {"dil", "sil", "dl", "cl", "r8b", "r9b"};
+char *argregs8[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
 void gen(Node *node);
 
@@ -25,16 +26,24 @@ void gen_lvar(Node *node) {
     error("代入の左辺値が変数ではありません");
 }
 
-void load() {
+void load(Type *type) {
     printf("    pop rax\n");    // アドレス
-    printf("    mov rax, [rax]\n");
+    if (size_of(type) == 1) {
+        printf("    movsx rax, BYTE PTR [rax]\n");
+    } else {
+        printf("    mov rax, [rax]\n");
+    }
     printf("    push rax\n");
 }
 
-void store() {
+void store(Type *type) {
     printf("    pop rdi\n");    // 値
     printf("    pop rax\n");    // アドレス
-    printf("    mov [rax], rdi\n");
+    if (size_of(type) == 1) {
+        printf("    mov [rax], dil\n");
+    } else {
+        printf("    mov [rax], rdi\n");
+    }
     printf("    push rdi\n");   // 式の値
 }
 
@@ -117,7 +126,7 @@ void gen(Node *node) {
             }
 
             for (int i = nargs - 1; i >= 0; --i) {
-                printf("    pop %s\n", argregs[i]);
+                printf("    pop %s\n", argregs8[i]);
             }
 
             // RSP must be aligned to a 16 byte boundary
@@ -145,7 +154,7 @@ void gen(Node *node) {
             gen_lvar(node);
             // 配列はポインターのように扱うため、アドレスのままにする (loadしない)
             if (node->type->type != TY_ARRAY) {
-                load();
+                load(node->type);
             }
             return;
         case ND_ASSIGN:
@@ -154,7 +163,7 @@ void gen(Node *node) {
             }
             gen_lvar(node->lhs);
             gen(node->rhs);
-            store();
+            store(node->type);
             return;
         case ND_ADDR:
             gen_lvar(node->lhs);
@@ -163,7 +172,7 @@ void gen(Node *node) {
             gen(node->lhs);
             // 配列はポインターのように扱うため、アドレスのままにする (loadしない)
             if (node->type->type != TY_ARRAY) {
-                load();
+                load(node->type);
             }
             return;
     }
@@ -247,7 +256,11 @@ void codegen(Program *prog) {
         int i = fn->param_count;
         for (LVar *lvar = fn->params; lvar; lvar = lvar->next) {
             printf("# %s\n", lvar->name);
-            printf("    mov [rbp - %d], %s\n", lvar->offset, argregs[--i]);
+            if (size_of(lvar->type) == 1) {
+                printf("    mov [rbp - %d], %s\n", lvar->offset, argregs1[--i]);
+            } else {
+                printf("    mov [rbp - %d], %s\n", lvar->offset, argregs8[--i]);
+            }
         }
 
         for (Node *node = fn->node; node; node = node->next) {

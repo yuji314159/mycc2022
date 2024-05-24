@@ -14,6 +14,8 @@ void debug_type(Type *type) {
     } else if (type->type == TY_ARRAY) {
         printf(" array[%d] of", type->len);
         debug_type(type->ptr_to);
+    } else if (type->type == TY_INT) {
+        printf(" int");
     } else {
         printf(" ERROR");
     }
@@ -41,6 +43,12 @@ Type *array_of(Type *base, size_t len) {
     return type;
 }
 
+Type *char_type() {
+    Type *type = calloc(1, sizeof(Type));
+    type->type = TY_CHAR;
+    return type;
+}
+
 Node *new_node(NodeKind kind) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = kind;
@@ -59,8 +67,7 @@ Node *new_node_unary(NodeKind kind, Node *expr) {
         if (expr->type->type == TY_PTR || expr->type->type == TY_ARRAY) {
             node->type = expr->type->ptr_to;
         } else {
-            // int型の即値をderefしたらint型として扱う
-            node->type = int_type();
+            error("この値はderefできません");
         }
     } else {
         node->type = expr->type;
@@ -203,12 +210,7 @@ Node *unary() {
         return new_node_unary(ND_DEREF, unary());
     } else if (consume("sizeof")) {
         Node *node = unary();
-        if (node->type->type == TY_INT || node->type->type == TY_PTR) {
-            return new_node_num(8);
-        } else {
-            // TODO: 1次元配列のみ対応
-            return new_node_num(8 * node->type->len);
-        }
+        return new_node_num(size_of(node->type));
     } else {
         Node *node = primary();
         if (consume("[")) {
@@ -360,6 +362,20 @@ Node *stmt() {
         }
         LVar *head = push_lvar(name, type, true);
         expect(";");
+    } else if (consume("char")) {
+        node = new_node(ND_NULL);
+        Type *type = char_type();
+        while (consume("*")) {
+            type = ptr_to(type);
+        }
+        char *name = expect_ident();
+        // TODO: 1次元配列のみ対応
+        if (consume("[")) {
+            type = array_of(type, expect_number());
+            expect("]");
+        }
+        LVar *head = push_lvar(name, type, true);
+        expect(";");
     } else {
         node = expr();
         expect(";");
@@ -372,8 +388,13 @@ LVar *funcparams() {
         return NULL;
     }
 
-    expect("int");
-    Type *type = int_type();
+    Type *type;
+    if (consume("char")) {
+        type = char_type();
+    } else {
+        expect("int");
+        type = int_type();
+    }
     while (consume("*")) {
         type = ptr_to(type);
     }
@@ -385,8 +406,13 @@ LVar *funcparams() {
     }
     push_lvar(name, type, true);
     while (consume(",")) {
-        expect("int");
-        Type *type = int_type();
+        Type *type;
+        if (consume("char")) {
+            type = char_type();
+        } else {
+            expect("int");
+            type = int_type();
+        }
         while (consume("*")) {
             type = ptr_to(type);
         }
@@ -412,6 +438,7 @@ Function *function() {
     locals = NULL;
 
     Function *fn = calloc(1, sizeof(Function));
+    // TODO: 関数の戻り値の型は int だけに制限
     expect("int");
     fn->name = expect_ident();
     expect("(");
@@ -434,8 +461,13 @@ Function *function() {
 }
 
 void global_var() {
-    expect("int");
-    Type *type = int_type();
+    Type *type;
+    if (consume("char")) {
+        type = char_type();
+    } else {
+        expect("int");
+        type = int_type();
+    }
     while (consume("*")) {
         type = ptr_to(type);
     }
@@ -452,7 +484,10 @@ void global_var() {
 bool is_function() {
     Token *tok = token;
 
-    expect("int");
+    if (consume("char")) {
+    } else {
+        expect("int");
+    }
     while (consume("*")) {}
     expect_ident();
     // TODO: 1次元配列のみ対応

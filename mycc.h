@@ -54,6 +54,7 @@ struct Type {
         TY_INT,
         TY_PTR,
         TY_ARRAY,
+        TY_CHAR,
     } type;
     struct Type *ptr_to;
     size_t len;
@@ -116,6 +117,8 @@ struct Program {
     Function *fns;
     LVar *globals;
 };
+
+size_t size_of(Type *type);
 
 extern char *user_input;
 extern Token *token;

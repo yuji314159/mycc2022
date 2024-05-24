@@ -12,14 +12,11 @@ int main(int argc, char *argv[]) {
     for (Function *fn = prog->fns; fn; fn = fn->next) {
         int offset = 0;
         for (LVar *lvar = fn->locals; lvar; lvar = lvar->next) {
-            if (lvar->type->type == TY_ARRAY) {
-                offset += 8 * lvar->type->len;
-            } else {
-                offset += 8;
-            }
+            offset += size_of(lvar->type);
             lvar->offset = offset;
         }
-        fn->stack_size = offset;
+        // 8 byte単位でalignする
+        fn->stack_size = (offset + 8 - 1) / 8 * 8;
     }
 
     codegen(prog);
