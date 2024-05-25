@@ -186,13 +186,13 @@ void gen(Node *node) {
     switch (node->kind) {
         case ND_ADD:
             if (node->type->type == TY_PTR || node->type->type == TY_ARRAY) {
-                printf("    imul rdi, 8\n");
+                printf("    imul rdi, %d\n", size_of(node->type->ptr_to));
             }
             printf("    add rax, rdi\n");
             break;
         case ND_SUB:
             if (node->type->type == TY_PTR || node->type->type == TY_ARRAY) {
-                printf("    imul rdi, 8\n");
+                printf("    imul rdi, %d\n", size_of(node->type->ptr_to));
             }
             printf("    sub rax, rdi\n");
             break;
@@ -235,12 +235,14 @@ void codegen(Program *prog) {
     printf(".data\n");
     for (LVar *lvar = prog->globals; lvar; lvar = lvar->next) {
         printf("%s:\n", lvar->name);
-        // TODO: 1次元配列のみ対応
-        size_t len = 8;
-        if (lvar->type->type == TY_ARRAY) {
-            len *= lvar->type->len;
+        if (!lvar->initial_contents) {
+            printf("    .zero %d\n", size_of(lvar->type));
+        } else {
+            printf("# initial: '%s' (%d)\n", lvar->initial_contents, lvar->initial_contents_len);
+            for (int i = 0; i < lvar->initial_contents_len; ++i) {
+                printf("    .byte %d\n", lvar->initial_contents[i]);
+            }
         }
-        printf("    .zero %d\n", len);
     }
 
     // text section

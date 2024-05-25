@@ -9,6 +9,7 @@ typedef enum {
     TK_RESERVED,
     TK_IDENT,
     TK_NUM,
+    TK_STR,
     TK_EOF,
 } TokenKind;
 
@@ -20,6 +21,9 @@ struct Token {
     int val;
     char *str;
     int len;
+
+    char *contents; // '\0' 終わりの文字列リテラル
+    size_t contents_len;
 };
 
 typedef enum {
@@ -68,6 +72,9 @@ struct LVar {
     Type *type;
     bool is_local;
     int offset;
+
+    char *initial_contents;
+    size_t initial_contents_len;
 };
 
 typedef struct Node Node;
@@ -126,6 +133,7 @@ void error(char *fmt, ...);
 char *strndup(const char *s, size_t n);
 bool consume(char *op);
 Token *consume_ident();
+Token *consume_str();
 bool expect(char *op);
 char *expect_ident();
 int expect_number();

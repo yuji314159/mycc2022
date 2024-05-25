@@ -50,6 +50,15 @@ Token *consume_ident() {
     return tok;
 }
 
+Token *consume_str() {
+    if (token->kind != TK_STR) {
+        return NULL;
+    }
+    Token *tok = token;
+    token = token->next;
+    return tok;
+}
+
 bool expect(char *op) {
     if (token->kind != TK_RESERVED ||
             strlen(op) != token->len ||
@@ -145,10 +154,26 @@ Token *tokenize(char *p) {
             p += len;
             continue;
         }
-        
+
         if (isdigit(*p)) {
             cur = new_token(TK_NUM, cur, p, 0);
             cur->val = strtol(p, &p, 10);
+            continue;
+        }
+
+        if (*p == '"') {
+            char *q = p++;
+            while (*p != '\0' && *p != '"') {
+                p++;
+            }
+            if (*p == '\0') {
+                error_at(q, "文字列リテラルが閉じられていません");
+            }
+            p++;    // skip '"'
+
+            cur = new_token(TK_STR, cur, q, p - q);
+            cur->contents = strndup(q + 1, p - q - 2);
+            cur->contents_len = p - q - 1;
             continue;
         }
 

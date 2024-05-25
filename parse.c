@@ -154,6 +154,13 @@ LVar *find_lvar(Token *tok) {
     return NULL;
 }
 
+char *new_label() {
+    static int cnt = 0;
+    char buf[20];
+    sprintf(buf, ".L.data.%d", cnt++);
+    return strndup(buf, 20);
+}
+
 Node *expr();
 
 Node *funcargs() {
@@ -193,6 +200,15 @@ Node *primary() {
         if (!lvar) {
             error("未定義の変数です");
         }
+        return new_node_lvar(lvar);
+    }
+
+    tok = consume_str();
+    if (tok) {
+        Type *type = array_of(char_type(), tok->contents_len);
+        LVar *lvar = push_lvar(new_label(), type, false);
+        lvar->initial_contents = tok->contents;
+        lvar->initial_contents_len = tok->contents_len;
         return new_node_lvar(lvar);
     }
 
