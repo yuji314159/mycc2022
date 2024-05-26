@@ -125,9 +125,10 @@ struct Program {
     LVar *globals;
 };
 
+extern char user_input[4096];
+
 size_t size_of(Type *type);
 
-extern char *user_input;
 extern Token *token;
 void error(char *fmt, ...);
 char *strndup(const char *s, size_t n);

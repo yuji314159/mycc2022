@@ -1,11 +1,17 @@
 #include "mycc.h"
 
+char user_input[4096];
+
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
+    if (argc != 1) {
         error("引数の個数が正しくありません\n");
     }
 
-    user_input = argv[1];
+    fread(user_input, sizeof(user_input), 1, stdin);
+    if (!feof(stdin)) {
+        error("ファイルをすべて読み込めませんでした");
+    }
+
     token = tokenize(user_input);
     Program *prog = program();
 

@@ -238,7 +238,6 @@ void codegen(Program *prog) {
         if (!lvar->initial_contents) {
             printf("    .zero %d\n", size_of(lvar->type));
         } else {
-            printf("# initial: '%s' (%d)\n", lvar->initial_contents, lvar->initial_contents_len);
             for (int i = 0; i < lvar->initial_contents_len; ++i) {
                 printf("    .byte %d\n", lvar->initial_contents[i]);
             }
